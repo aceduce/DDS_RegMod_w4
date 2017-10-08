@@ -1,0 +1,188 @@
+---
+title: "DDS_RegMod_w4 submission"
+author: "Jie Yang"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Executive Summary
+
+---
+Here, an regression analysis is made on the `mtcars` dataset, where the relation of mpg and transmission (auto and manual) is studied with the linear regression method. T-test and F-test are used for single/multiple variable regression and model selection is used to identify the variables signficantly impacting the mpg. Particularly, `step()`is used with `lm(mpg ~ .)`. The transmission (am), weight (wt), 1/4 mile time(qsec) are used for linear regression, where each coeffient is different from zero at confidence level of 95%. Ovearll, this model can explain 83% of the variance and the resiual plots shows it's a suffient linear regression model. (Some futher discussion layouts a model consider wt and am interaction can explain 88% of the variance). 
+From this study, it's found that the difference introduced by automic and manual transmission is from the coeffient for am, so manual will increaes the mpg by 2.94 mile per gallon compared with automatic. The confidence interval is 0.05~5.83 with 95% confidence level. 
+---
+### Questoin 1: Is an automatic or manual transmission better for MPG?
+
+#### Exploratory data
+
+```{r echo=TRUE,results="hide"}
+str(mtcars)
+```
+
+In total, this dataset has 32 observations, with 11 variables. 
+
+Key parameters needed in this task are mpg (mile per gallon), am (transmission): 0 strands for automatic and 1 stands for mannual. We need to do linear regression on this. Plots are available in the Appendix. 
+
+#### Model Selections:
+
+Since the mpg is continous, and am is either 0 or 1, we can use linear regression `lm(mpg~ ., data=mtcars)`. However, one need to find the regressor that can explain the mpg. With the `step()` function (or `drop1()`,mannual examination on p value for F-test), one can find that the transmission (am), weight (wt), 1/4 mile time(qsec) are used for linear regression, where each coeffient is different from zero at confidence level of 95%. Ovearll, this model can explain 83% of the variance and the resiual plots shows it's a suffient linear regression model. Details are avaialbe in Appendix, model selection. But essentically, one get
+
+$$mpg_{i}=\beta_{0} +\beta_{1}qsec_{i}+\beta_{2}wt_{i}+\beta_{3}am_{i}+\epsilon_{i}$$
+where $$\beta_{0}=9.62,  \beta_{1}=1.23, \beta_{2}=-3.92, \beta_{3}=2.94$$
+
+
+```{r, echo=F, results="hide"}
+ffit<-lm(mpg ~ qsec+wt+am, data=mtcars)
+summary(ffit)$coef
+```
+As the summary above shows, the coeffecients are 
+```{r, echo=F}
+summary(ffit)$coeff
+```
+The simple one variable linear regression model `lm(mpg~am`) only explains 36% of the variance from mpg. 
+$$mpg_{i}=\beta_{0} +\beta_{1}am_{i}+\epsilon_{i}$$
+```{r, echo=F, results="hide"}
+fit<-lm(mpg~am, data=mtcars)
+summary(fit)
+```
+
+More details on model selection is avaiable at appendix.
+
+#### Residual Anallysis and Plots
+For linear regression, we need residual plots, to test if there's residual is depedence on x or y in the model.
+```{r, fig.width=5,fig.height=4}
+par(mfrow=c(2,2)) # alterntive could be plot(predict(ffit),resid(ffit),pch='*');abline(h=mean(resid(ffit)), col="red")
+plot(ffit)
+```
+From the plot, we see
+1. Residual vs fitted doesn't show consistent pattern (no heteroscedasticity)
+2. Normal Q-Q plots shows residual are normally distributed as the dots lie on the line largely.
+3. Scale location plots suggest constant variance as dots are randomly located.
+4. Residual leverage suggests no outlier as they are within 0.5 band. 
+
+#### Interpretations of coeffcients
+Now, we get the coeffients after model selections. Each p value is <0.05, they're significantly different from zero with confidence level of 95%. It explains 83% (adjusted R squared) of the total variance. 
+```{r, echo="F"}
+ffit<-lm(mpg ~ qsec+wt+am, data=mtcars)
+summary(ffit)$coef
+```
+
+### Question 2
+
+#### "Quantify the MPG difference between automatic and manual transmissions"
+Now, from Question 1, we decided the model(ffit)
+$$mpg_{i}=\beta_{0} +\beta_{1}qsec_{i}+\beta_{2}wt_{i}+\beta_{3}am_{i}+\epsilon_{i}$$
+where $$\beta_{0}=9.62,  \beta_{1}=1.23, \beta_{2}=-3.92, \beta_{3}=2.94$$
+The difference introduced by automic and manual transmission is from 2,94, so manual will increaes the mpg by 2.94 mile per gallon compared with automatic. The confidence interval is 0.05~5.83.
+```{r}
+confint(ffit, "am")
+```
+
+##Appendix:
+1. Hypotheis test
+
+Based on the exploratory information from above, we'll generat the hypothesis that 
+
+*H<sub>0</sub>: automatic is equal to manual * 
+*H<sub>a</sub>: automatic is less than the manual*
+
+To do a test
+```{r}
+t.test(mtcars[mtcars$am==0,]$mpg,mtcars[mtcars$am==1,]$mpg, alternative = "less", paired = F, var.equal = F,conf.level = 0.95)
+```
+
+Given the pvalue =0.0006868, we reject the H<sub>0</sub> hypothesis, so we conclude that automatic is less than manual (with less mpg). The confidence level is 95%, and the confidence interval for the difference (auto-manual in mpg) is 
+```
+95 percent confidence interval:
+      -Inf -3.913256
+```
+2. More details on the model selections:
+
+```{r}
+#fit all the parameters in the lm
+model_full<-lm(mpg ~ . , data=mtcars)
+summary(model_full)
+```
+
+Although the total p-value is low, each coeffcient p value is not less than 0.05. So, none of them are signficant in the confidence range we use in this report 95%. We resort to the `step()`function to find the ones sigifnicifant. It will list them in ascending order. Since the smaller AIC value is more likely to resemble the TRUTH model
+```{r, results="hide"}
+step_fit<-step(model_full)
+summary(step_fit)
+```
+
+Alternative methods are `drop1()`,`add1()`(using F test for multiple variable linear regressions)
+```{r, results="hide"}
+drop1(model_full, test="F")
+#above find cyl to drop, as the p value is 0.91609 
+drop1(update(model_full, ~ . -cyl), test = "F")
+#above find disp to drop, as the p value is 0.45381
+drop1(update(model_full, ~ . -cyl -disp), test = "F")
+#above find vs to drop, as the p value is 0.96332
+drop1(update(model_full, ~ . -cyl -disp -vs), test = "F")
+#copying above, we'll continue to drop a few parm: drat, gear, hp, carb
+drop1(update(model_full, ~ . -cyl -disp -vs -drat -gear -hp -carb), test = "F")
+#This is finally agreeing with the step AIC based approach, we finally keep am, qsec,wt
+```
+Automatic F test based approach:
+```{r, results='hide',warning=FALSE,message=FALSE}
+library(rms)
+ols.full <- ols(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, data=mtcars)
+fastbw(ols.full, rule = "p", sls = 0.05)
+```
+
+Above approach only leaves wt, qsec (ref.7). But for this study, we can keep am, as the p value is <0.05 (confi.level 95%). Anova also suggest am helps to explain the mpg.
+```{r, echo=FALSE}
+lm.1<-lm(mpg ~ wt+qsec, data=mtcars)
+lm.2<-lm(mpg ~ wt+qsec+am, data=mtcars)
+anova(lm.1,lm.2)
+```
+
+3. Further refinements of the model (Optional):
+As the pair plot suggest, we can see there could be interactions between weights and am, qsec and am.
+
+`t.test(mtcars[mtcars$am==0,]$wt,mtcars[mtcars$am==1,]$wt, alternative = "greater", paired = F, var.equal = F, conf.level = 0.95)` suggest p-value = 3.136e-06 to reject H<sub>0</sub> .
+
+But regarding qsec, `t.test(mtcars[mtcars$am==0,]$qsec,mtcars[mtcars$am==1,]$qsec, alternative = "two.sided", paired = F, var.equal = F, conf.level = 0.95)`, since `p-value = 0.2093` we cannot reject the *H<sub>0</sub>* that mean are identical on qsec.  
+
+Hence, we can further include the interactions term `wt:am`. The model indeed is better from the pvalue in nova (0.001809<<0.05), and adjusted R<sup>2</sup> (ffit is 0.83, ffit is 0.88, fit is only 0.36)
+```{r,echo=FALSE}
+ffit2<-lm(mpg ~ wt + qsec + am + am:wt, data=mtcars)
+summary(ffit2)
+anova(ffit,ffit2)
+```
+
+4. Pair plot to show the correlations
+```{r,echo=F,results='hide',fig.height=5}
+#pair plots:
+par(frow=c(2,1))
+pairs(mtcars, panel=panel.smooth, main="Overview of correlations")
+pairs(mtcars[,c("mpg","wt","qsec","am")], panel=panel.smooth,main="pair plots to look at correlations w parms from model selections")
+```
+
+5. Exploratory Plots for the median for transmissions. 
+
+```{r echo=FALSE, results='hide',fig.height=3, fig.width=5}
+str(mtcars)
+library(ggplot2)
+g<-ggplot(data=mtcars, aes(as.factor(am),mpg))+
+  geom_boxplot(aes(color=am))+
+  geom_jitter(width = 0.2,size=2,aes(color=am))+
+  labs(title="MPG on Transmissions (0-m;1-a)",x="Transimissions",y="Mile per gallon")
+print(g)
+print("median values for mannual and auto are ")
+print(median(mtcars[mtcars$am==0,]$mpg))
+print(median(mtcars[mtcars$am==1,]$mpg))
+```
+
+
+##### Reference works:
+1. https://github.com/alex23lemm/Regression-Models-Project/blob/master/mtcars_analysis.pdf
+2. https://github.com/codebender/regression-models-course-project/blob/master/Motor%20Trend%20MPG%20Data%20Analysis.pdf
+3. https://github.com/fcampelo/RM-course-project
+4. https://github.com/Xiaodan/Coursera-Regression-Models/blob/master/motor_trend_project/report.pdf
+5. https://stats.stackexchange.com/questions/214682/stepwise-regression-in-r-how-does-it-work
+6. https://stat.ethz.ch/R-manual/R-devel/library/stats/html/step.html
+7. http://rstudio-pubs-static.s3.amazonaws.com/2899_a9129debf6bd47d2a0501de9c0dc583d.html
+8. https://stats.stackexchange.com/questions/172782/how-to-use-r-anova-results-to-select-best-model
+

@@ -1,15 +1,15 @@
 ---
 title: "DDS_RegMod_w4"
-author: Jie Yang
+author: "Jie Yang"
 output:
-  
   html_document: default
+  pdf_document: default
 ---
-###Questoin 1
+### Questoin 1
 
 #### "Is an automatic or manual transmission better for MPG"
 
-####Exploratory data
+#### Exploratory data
 
 ```{r}
 str(mtcars)
@@ -32,6 +32,7 @@ print(median(mtcars[mtcars$am==1,]$mpg))
 pairs(mtcars, panel=panel.smooth, main="Overview of correlations")
 pairs(mtcars[,c("mpg","wt","qsec","am")], panel=panel.smooth,main="pair plots to look at correlations w parms from model selections")
 ```
+
 Based on the exploratory information from above, we'll generat the hypothesis that 
 
 *H<sub>0</sub>: automatic is equal to manual * 
@@ -48,7 +49,7 @@ Given the pvalue =0.0006868, we reject the H<sub>0</sub> hypothesis, so we concl
       -Inf -3.913256
 ```
 
-####Model Selections:
+#### Model Selections:
 Since the mpg is continous, and am is either 0 or 1, we can use linear regression `lm(mpg~am)`
 ```{r}
 fit<-lm(mpg~am, data=mtcars)
@@ -60,7 +61,9 @@ summary(fit)$coeff
 ```
 As in the linear regression model shows
 $$Y_{i}=\beta_{0} +\beta_{1}X_{i}+\epsilon_{i}$$
+
 #### More details on the model selections:
+
 ```{r}
 #fit all the parameters in the lm
 model_full<-lm(mpg ~ . , data=mtcars)
@@ -68,13 +71,13 @@ summary(model_full)
 ```
 
 Although the total p-value is low, each coeffcient p value is not less than 0.05. So, none of them are signficant in the confidence range we use in this report 95%. We resort to the `step()`function to find the ones sigifnicifant. It will list them in ascending order. Since the smaller AIC value is more likely to resemble the TRUTH model
-```{r,results="hide"}
+```{r, results="hide"}
 step_fit<-step(model_full)
 summary(step_fit)
 ```
 
 Alternative methods are `drop1()`,`add1()`(using F test for multiple variable linear regressions)
-```{r,results="hide"}
+```{r, results="hide"}
 drop1(model_full, test="F")
 #above find cyl to drop, as the p value is 0.91609 
 drop1(update(model_full, ~ . -cyl), test = "F")
@@ -87,11 +90,12 @@ drop1(update(model_full, ~ . -cyl -disp -vs -drat -gear -hp -carb), test = "F")
 #This is finally agreeing with the step AIC based approach, we finally keep am, qsec,wt
 ```
 Automatic F test based approach:
-```{r,results="hide"}
+```{r, results="hide"}
 library(rms)
 ols.full <- ols(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, data=mtcars)
 fastbw(ols.full, rule = "p", sls = 0.05)
 ```
+
 Above approach only leaves wt, qsec (ref.7). But for this study, we can keep am, as the p value is <0.05 (confi.level 95%). Anova also suggest am helps to explain the mpg.
 ```{r, echo="F"}
 lm.1<-lm(mpg ~ wt+qsec, data=mtcars)
@@ -105,7 +109,7 @@ ffit<-lm(mpg ~ qsec+wt+am, data=mtcars)
 summary(ffit)$coef
 ```
 
-####Residual Anallysis and Plots
+#### Residual Anallysis and Plots
 For linear regression, we need residual plots, to test if there's residual is depedence on x or y in the model.
 ```{r}
 par(mfrow=c(2,2))
@@ -120,8 +124,12 @@ From the plot, we see
 4. Residual leverage suggests no outlier as they are within 0.5 band. 
 
 #### Further refinements of the model (Optinal):
-As the pair plot suggest, we can see there could be interactions between weights and am, qsec and am.`t.test(mtcars[mtcars$am==0,]$wt,mtcars[mtcars$am==1,]$wt, alternative = "greater", paired = F, var.equal = F, conf.level = 0.95)` suggest p-value = 3.136e-06 to reject *H<sub>0</sub>*. 
+As the pair plot suggest, we can see there could be interactions between weights and am, qsec and am.
+
+`t.test(mtcars[mtcars$am==0,]$wt,mtcars[mtcars$am==1,]$wt, alternative = "greater", paired = F, var.equal = F, conf.level = 0.95)` suggest p-value = 3.136e-06 to reject H<sub>0</sub> .
+
 But regarding qsec, `t.test(mtcars[mtcars$am==0,]$qsec,mtcars[mtcars$am==1,]$qsec, alternative = "two.sided", paired = F, var.equal = F, conf.level = 0.95)`, since `p-value = 0.2093` we cannot reject the *H<sub>0</sub>* that mean are identical on qsec.  
+
 Hence, we can further include the interactions term `wt:am`. The model indeed is better from the pvalue in nova (0.001809<<0.05), and adjusted R<sup>2</sup> (ffit is 0.83, ffit is 0.88, fit is only 0.36)
 ```{r}
 ffit2<-lm(mpg ~ wt + qsec + am + am:wt, data=mtcars)
@@ -129,7 +137,7 @@ summary(ffit2)
 anova(ffit,ffit2)
 ```
 
-###Question 2
+### Question 2
 
 #### "Quantify the MPG difference between automatic and manual transmissions"
 Now, from Question 1, we decided the model(ffit)
